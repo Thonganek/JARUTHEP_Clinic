@@ -176,7 +176,7 @@
     try{appointmentRows=await api('listAppointments',{month:key},true);renderAppointmentCalendar();$('#apptRows').innerHTML=appointmentRows.length?appointmentRows.map(r=>`<tr><td>${esc(isoToTH(r.date))}</td><td>${esc(r.time||'–')}</td><td>${esc(r.hn)}</td><td><button type="button" class="patient-record-link" data-patient-hn="${esc(r.hn)}">${esc(r.name||'ไม่พบชื่อผู้ป่วย')}</button></td><td>${esc(r.chronicDisease||'–')}</td><td>${esc(r.reason)}</td><td><select class="status-select" data-appt-id="${esc(r.id)}">${APPT_STATUSES.map(s=>`<option${s===r.status?' selected':''}>${esc(s)}</option>`).join('')}</select></td></tr>`).join(''):'<tr><td colspan="7" class="empty">ยังไม่มีนัดหมายในเดือนนี้</td></tr>'}catch(e){appointmentRows=[];renderAppointmentCalendar();$('#apptRows').innerHTML='<tr><td colspan="7" class="empty">โหลดข้อมูลนัดหมายไม่สำเร็จ</td></tr>';authError(e)}
   }
   async function loadInventory(){try{const rows=await api('listInventory',{},true);$('#stockRows').innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.itemCode)}</td><td>${esc(r.itemName)}</td><td><b>${esc(r.quantity)}</b></td><td>${esc(r.unit)}</td><td>${esc(r.lot)}</td><td>${esc(r.expiryDate)}</td><td><span class="badge" style="${r.low?'background:#ffe8e8;color:#b4232b':''}">${r.low?'ควรสั่งซื้อ':'ปกติ'}</span></td></tr>`).join(''):'<tr><td colspan="7" class="empty">ยังไม่มีข้อมูลคลัง</td></tr>'}catch(e){authError(e)}}
-  function authError(e){toast(e.message,true);if(/เซสชันหมดอายุ|ไม่มีสิทธิ์เข้าถึง/.test(e.message)){token='';META=null;sessionStorage.removeItem('clinicToken');setAuth(false);closeForm('chartModal');showPage('dashboard')}}
+  function authError(e){toast(e.message,true);if(/เซสชันหมดอายุ|ไม่มีสิทธิ์เข้าถึง|is not valid JSON/.test(e.message)){token='';META=null;sessionStorage.removeItem('clinicToken');setAuth(false);closeForm('chartModal');showPage('dashboard')}}
   function bindForm(id,action,after){$('#'+id).onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{const res=await api(action,Object.fromEntries(new FormData(e.target)),true);toast('บันทึกข้อมูลสำเร็จ');e.target.reset();BRIEF={};fillTodayDates(true,e.target);e.target.querySelectorAll('input[name="hn"]').forEach(i=>hnRefresh(i));after?.(res)}catch(x){authError(x)}finally{b.disabled=false}}}
   bindForm('patientForm','savePatient',r=>{closeForm('patientModal');loadPatients();loadDashboard();loadPatientOptions();if(r&&r.hn)toast('ลงทะเบียนสำเร็จ • HN ที่ระบบสร้างให้คือ '+r.hn)});bindForm('visitForm','saveVisit',loadDashboard);bindForm('appointmentForm','saveAppointment',()=>{loadAppointments();loadDashboard()});bindForm('inventoryForm','saveInventory',loadInventory);bindForm('financeForm','saveFinance',loadDashboard);
   document.addEventListener('click',e=>{const link=e.target.closest('[data-patient-hn]');if(link)openPatientRecord(link.dataset.patientHn)});
@@ -452,7 +452,7 @@
   async function loadPatientOptions(){
     if(!token)return;
     try{PATIENT_OPTS=await api('patientOptions',{},true);$$('input[name="hn"]').forEach(i=>hnRefresh(i))}
-    catch(e){/* ไม่ขัดจังหวะงานหลัก */}
+    catch(e){if(/เซสชันหมดอายุ|ไม่มีสิทธิ์เข้าถึง|is not valid JSON/.test(e.message))authError(e)} // เคลียร์ token ค้างตั้งแต่เปิดหน้า
   }
   function hnSearch(q){
     q=String(q||'').trim().toLowerCase();
